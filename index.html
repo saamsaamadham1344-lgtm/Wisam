@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bulut Macerası ⛅</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 50%, #E0F7FA 100%);
+            font-family: 'Arial', sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(135, 206, 235, 0.9);
+            z-index: 10;
+        }
+
+        #gameOverScreen {
+            display: none;
+        }
+
+        .title {
+            font-size: 48px;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 30px;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 22px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+        }
+
+        #scoreDisplay {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            z-index: 5;
+            font-weight: bold;
+        }
+
+        #levelDisplay {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            font-size: 16px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            z-index: 5;
+            font-weight: bold;
+        }
+
+        #boostBtn {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid #FFD700;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            cursor: pointer;
+            z-index: 5;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            transition: transform 0.1s;
+        }
+
+        #boostBtn:active {
+            transform: scale(0.9);
+        }
+
+        #boostBtn .lightning {
+            font-size: 36px;
+            filter: drop-shadow(0 0 8px #FFD700);
+        }
+
+        #boostBar {
+            position: absolute;
+            bottom: 110px;
+            right: 27px;
+            width: 56px;
+            height: 6px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 3px;
+            z-index: 5;
+            display: none;
+        }
+
+        #boostBarFill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            border-radius: 3px;
+            transition: width 0.1s;
+        }
+
+        .newAnimalPopup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #FFD700;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+            z-index: 8;
+            animation: popIn 2s forwards;
+            pointer-events: none;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            40% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+        }
+
+        #highScoreDisplay {
+            font-size: 22px;
+            color: #FFD700;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #finalScore {
+            font-size: 36px;
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="scoreDisplay">0</div>
+<div id="levelDisplay"></div>
+
+<div id="boostBtn" onclick="activateBoost()">
+    <span class="lightning">⚡</span>
+</div>
+<div id="boostBar"><div id="boostBarFill"></div></div>
+
+<div id="startScreen">
+    <div class="title">⛅ Bulut Macerası</div>
+    <div class="subtitle">Ekrana dokun veya boşluk tuşuna bas!<br>⚡ Şimşek tuşu ile ileriye uç!</div>
+    <button class="btn" onclick="startGame()">🎮 Oyna</button>
+</div>
+
+<div id="gameOverScreen">
+    <div class="title">💥 Çarpıştın!</div>
+    <div id="finalScore"></div>
+    <div id="highScoreDisplay"></div>
+    <button class="btn" onclick="startGame()">🔄 Tekrar Oyna</button>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Game variables
+let cloud, obstacles, particles, bgClouds, score, gameSpeed, gameRunning, gameStarted;
+let boostEnergy, boosting, boostTimer;
+let highScore = localStorage.getItem('cloudGameHighScore') || 0;
+let frameCount = 0;
+let lastObstacleScore = -1;
+let currentLevel = 0;
+let shownLevels = {};
+
+const GRAVITY = 0.45;
+const JUMP_FORCE = -8;
+const BOOST_DURATION = 40;
+const BOOST_SPEED = 12;
+const MAX_BOOST = 100;
+
+// Animal definitions per level
+const animalLevels = [
+    { score: 0, name: "Kuşlar 🐦", emoji: "🐦", type: "bird" },
+    { score: 100, name: "Yarasalar 🦇", emoji: "🦇", type: "bat" },
+    { score: 200, name: "Arılar 🐝", emoji: "🐝", type: "bee" },
+    { score: 300, name: "Kartallar 🦅", emoji: "🦅", type: "eagle" },
+    { score: 400, name: "Ejderhalar 🐉", emoji: "🐉", type: "dragon" },
+    { score: 500, name: "Uzaylılar 👾", emoji: "👾", type: "alien" },
+    { score: 600, name: "Hayaletler 👻", emoji: "👻", type: "ghost" },
+    { score: 700, name: "Meteorlar ☄️", emoji: "☄️", type: "meteor" },
+    { score: 800, name: "Fırtına Bulutları 🌩️", emoji: "🌩️", type: "storm" },
+    { score: 900, name: "Anka Kuşları 🔥", emoji: "🔥", type: "phoenix" },
+];
+
+function getAnimalForScore(s) {
+    let level = animalLevels[0];
+    for (let i = animalLevels.length - 1; i >= 0; i--) {
+        if (s >= animalLevels[i].score) {
+            level = animalLevels[i];
+            break;
+        }
+    }
+    return level;
+}
+
+function getCurrentLevelIndex(s) {
+    let idx = 0;
+    for (let i = animalLevels.length - 1; i >= 0; i--) {
+        if (s >= animalLevels[i].score) {
+            idx = i;
+            break;
+        }
+    }
+    return idx;
+}
+
+function initGame() {
+    cloud = {
+        x: W * 0.2,
+        y: H * 0.5,
+        w: 60,
+        h: 40,
+        vy: 0,
+        umbrella: true,
+        boostVx: 0,
+        invincible: 0
+    };
+    obstacles = [];
+    particles = [];
+    bgClouds = [];
+    score = 0;
+    gameSpeed = 3;
+    boostEnergy = MAX_BOOST;
+    boosting = false;
+    boostTimer = 0;
+    frameCount = 0;
+    lastObstacleScore = -1;
+    currentLevel = 0;
+    shownLevels = {};
+
+    // Create background clouds
+    for (let i = 0; i < 5; i++) {
+        bgClouds.push({
+            x: Math.random() * W,
+            y: Math.random() * H * 0.7,
+            size: 30 + Math.random() * 50,
+            speed: 0.3 + Math.random() * 0.7,
+            opacity: 0.2 + Math.random() * 0.3
+        });
+    }
+}
+
+function startGame() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'none';
+    document.getElementById('boostBtn').style.display = 'flex';
+    document.getElementById('boostBar').style.display = 'block';
+    initGame();
+    gameRunning = true;
+    gameStarted = true;
+    gameLoop();
+}
+
+function jump() {
+    if (!gameRunning) return;
+    cloud.vy = JUMP_FORCE;
+    // Jump particles
+    for (let i = 0; i < 5; i++) {
+        particles.push({
+            x: cloud.x,
+            y: cloud.y + cloud.h / 2,
+            vx: -Math.random() * 3,
+            vy: Math.random() * 2 - 1,
+            life: 20,
+            maxLife: 20,
+            color: 'rgba(255,255,255,',
+            size: 3 + Math.random() * 4
+        });
+    }
+}
+
+function activateBoost() {
+    if (!gameRunning || boostEnergy < 30) return;
+    boosting = true;
+    boostTimer = BOOST_DURATION;
+    boostEnergy -= 30;
+    cloud.boostVx = BOOST_SPEED;
+    cloud.invincible = BOOST_DURATION;
+    cloud.vy = -3;
+
+    // Boost particles
+    for (let i = 0; i < 15; i++) {
+        particles.push({
+            x: cloud.x,
+            y: cloud.y + Math.random() * cloud.h,
+            vx: -5 - Math.random() * 10,
+            vy: Math.random() * 4 - 2,
+            life: 30,
+            maxLife: 30,
+            color: 'rgba(255,215,0,',
+            size: 4 + Math.random() * 6
+        });
+    }
+}
+
+function spawnObstacle() {
+    let level = getAnimalForScore(score);
+    let y = 50 + Math.random() * (H - 150);
+    let size, speed, sineAmp, sineFreq;
+
+    switch (level.type) {
+        case "bird":
+            size = 30; speed = 0; sineAmp = 0; sineFreq = 0; break;
+        case "bat":
+            size = 28; speed = 0.5; sineAmp = 40; sineFreq = 0.05; break;
+        case "bee":
+            size = 24; speed = 0; sineAmp = 25; sineFreq = 0.1; break;
+        case "eagle":
+            size = 36; speed = 1; sineAmp = 0; sineFreq = 0; break;
+        case "dragon":
+            size = 40; speed = 0.5; sineAmp = 50; sineFreq = 0.03; break;
+        case "alien":
+            size = 32; speed = 1.5; sineAmp = 30; sineFreq = 0.07; break;
+        case "ghost":
+            size = 34; speed = 0; sineAmp = 60; sineFreq = 0.04; break;
+        case "meteor":
+            size = 30; speed = 2; sineAmp = 0; sineFreq = 0; break;
+        case "storm":
+            size = 45; speed = 0; sineAmp = 20; sineFreq = 0.02; break;
+        case "phoenix":
+            size = 38; speed = 1; sineAmp = 35; sineFreq = 0.05; break;
+        default:
+            size = 30; speed = 0; sineAmp = 0; sineFreq = 0;
+    }
+
+    obstacles.push({
+        x: W + 50,
+        y: y,
+        baseY: y,
+        w: size,
+        h: size,
+        emoji: level.emoji,
+        type: level.type,
+        extraSpeed: speed,
+        sineAmp: sineAmp,
+        sineFreq: sineFreq,
+        phase: Math.random() * Math.PI * 2,
+        time: 0
+    });
+}
+
+function drawCloud(x, y, w, h, invincible) {
+    ctx.save();
+
+    if (invincible > 0) {
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 20;
+    }
+
+    // Cloud body
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    // Main body
+    let cx = x, cy = y + h * 0.3;
+    ctx.ellipse(cx, cy, w * 0.5, h * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx - w * 0.25, cy - h * 0.15, w * 0.3, h * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + w * 0.2, cy - h * 0.2, w * 0.35, h * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx - w * 0.1, cy - h * 0.3, w * 0.25, h * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(cx - 8, cy - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + 8, cy - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Smile
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy + 4, 6, 0, Math.PI);
+    ctx.stroke();
+
+    // Cheeks
+    ctx.fillStyle = 'rgba(255, 182, 193, 0.5)';
+    ctx.beginPath();
+    ctx.ellipse(cx - 14, cy + 3, 4, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 14, cy + 3, 4, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Umbrella
+    ctx.fillStyle = '#FFD700';
+    // Handle
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + w * 0.3, cy - h * 0.3);
+    ctx.lineTo(cx + w * 0.3, cy - h * 0.8);
+    ctx.stroke();
+    // Umbrella top
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(cx + w * 0.3, cy - h * 0.8, 15, Math.PI, 0);
+    ctx.fill();
+    ctx.strokeStyle = '#FFA500';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx + w * 0.3, cy - h * 0.8, 15, Math.PI, 0);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawBackground() {
+    // Sky gradient
+    let grad = ctx.createLinearGradient(0, 0, 0, H);
+
+    let levelIdx = getCurrentLevelIndex(score);
+    switch (levelIdx) {
+        case 0: // Kuşlar - mavi gökyüzü
+            grad.addColorStop(0, '#87CEEB');
+            grad.addColorStop(1, '#E0F7FA');
+            break;
+        case 1: // Yarasalar - akşam
+            grad.addColorStop(0, '#4A6FA5');
+            grad.addColorStop(1, '#B8860B');
+            break;
+        case 2: // Arılar - yeşilimsi
+            grad.addColorStop(0, '#87CEEB');
+            grad.addColorStop(1, '#90EE90');
+            break;
+        case 3: // Kartallar - dağ
+            grad.addColorStop(0, '#5B86E5');
+            grad.addColorStop(1, '#D4E4FC');
+            break;
+        case 4: // Ejderhalar - kırmızı
+            grad.addColorStop(0, '#8B0000');
+            grad.addColorStop(1, '#FF6347');
+            break;
+        case 5: // Uzaylılar - uzay
+            grad.addColorStop(0, '#0a0a2e');
+            grad.addColorStop(1, '#1a1a4e');
+            break;
+        case 6: // Hayaletler - gece
+            grad.addColorStop(0, '#1a1a2e');
+            grad.addColorStop(1, '#3d3d6b');
+            break;
+        case 7: // Meteorlar - uzay
+            grad.addColorStop(0, '#0d0d1a');
+            grad.addColorStop(1, '#2d1b4e');
+            break;
+        case 8: // Fırtına
+            grad.addColorStop(0, '#2c3e50');
+            grad.addColorStop(1, '#4a6741');
+            break;
+        case 9: // Anka
+            grad.addColorStop(0, '#ff4500');
+            grad.addColorStop(1, '#ff8c00');
+            break;
+        default:
+            grad.addColorStop(0, '#87CEEB');
+            grad.addColorStop(1, '#E0F7FA');
+    }
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars for dark levels
+    if (levelIdx >= 5 && levelIdx <= 7) {
+        for (let i = 0; i < 30; i++) {
+            let sx = (i * 137 + frameCount * 0.2) % W;
+            let sy = (i * 97) % (H * 0.6);
+            ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.sin(frameCount * 0.05 + i) * 0.3})`;
+            ctx.fillRect(sx, sy, 2, 2);
+        }
+    }
+
+    // Background clouds
+    bgClouds.forEach(c => {
+        ctx.fillStyle = `rgba(255,255,255,${c.opacity})`;
+        ctx.beginPath();
+        ctx.ellipse(c.x, c.y, c.size, c.size * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        c.x -= c.speed + gameSpeed * 0.3;
+        if (c.x < -c.size * 2) {
+            c.x = W + c.size;
+            c.y = Math.random() * H * 0.7;
+        }
+    });
+}
+
+function checkCollision(a, b) {
+    let margin = 8;
+    return a.x - a.w / 2 + margin < b.x + b.w / 2 - margin &&
+           a.x + a.w / 2 - margin > b.x - b.w / 2 + margin &&
+           a.y - a.h / 2 + margin < b.y + b.h / 2 - margin &&
+           a.y + a.h / 2 - margin > b.y - b.h / 2 + margin;
+    }
+
+function gameOver() {
+    gameRunning = false;
+    document.getElementById('boostBtn').style.display = 'none';
+    document.getElementById('boostBar').style.display = 'none';
+
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('cloudGameHighScore', highScore);
+    }
+
+    document.getElementById('finalScore').textContent = `Skor: ${score}`;
+    document.getElementById('highScoreDisplay').textContent = `🏆 En Yüksek: ${highScore}`;
+
+    setTimeout(() => {
+        document.getElementById('gameOverScreen').style.display = 'flex';
+    }, 500);
+
+    // Explosion particles
+    for (let i = 0; i < 20; i++) {
+        particles.push({
+            x: cloud.x,
+            y: cloud.y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            life: 40,
+            maxLife: 40,
+            color: 'rgba(255,100,100,',
+            size: 5 + Math.random() * 8
+        });
+    }
+}
+
+function showNewAnimalPopup(levelData) {
+    let popup = document.createElement('div');
+    popup.className = 'newAnimalPopup';
+    popup.innerHTML = `Yeni Düşman!<br>${levelData.name}`;
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 2000);
+}
+
+function gameLoop() {
+    if (!gameRunning) return;
+
+    frameCount++;
+    ctx.clearRect(0, 0, W, H);
+
+    drawBackground();
+
+    // Update game speed
+    gameSpeed = 3 + score * 0.005;
+    if (gameSpeed > 10) gameSpeed = 10;
+
+    // Boost logic
+    if (boosting) {
+        boostTimer--;
+        if (boostTimer <= 0) {
+            boosting = false;
+            cloud.boostVx = 0;
+        }
+    }
+
+    // Regenerate boost
+    if (!boosting && boostEnergy < MAX_BOOST) {
+        boostEnergy += 0.15;
+    }
+    document.getElementById('boostBarFill').style.width = (boostEnergy / MAX_BOOST * 100) + '%';
+
+    if (cloud.invincible > 0) cloud.invincible--;
+
+    // Cloud physics
+    cloud.vy += GRAVITY;
+    cloud.y += cloud.vy;
+
+    // Boost movement
+    if (cloud.boostVx > 0) {
+        cloud.x += cloud.boostVx;
+        cloud.boostVx *= 0.92;
+        if (cloud.boostVx < 0.5) cloud.boostVx = 0;
+
+        // Boost trail
+        if (frameCount % 2 === 0) {
+            particles.push({
+                x: cloud.x - cloud.w / 2,
+                y: cloud.y + Math.random() * cloud.h - cloud.h / 2,
+                vx: -3 - Math.random() * 3,
+                vy: Math.random() * 2 - 1,
+                life: 15,
+                maxLife: 15,
+                color: 'rgba(255,215,0,',
+                size: 3 + Math.random() * 5
+            });
+        }
+    }
+
+    // Return cloud to original x position
+    if (!boosting && cloud.x > W * 0.2) {
+        cloud.x += (W * 0.2 - cloud.x) * 0.05;
+    }
+
+    // Boundaries
+    if (cloud.y < cloud.h / 2) {
+        cloud.y = cloud.h / 2;
+        cloud.vy = 0;
+    }
+    if (cloud.y > H - cloud.h / 2) {
+        cloud.y = H - cloud.h / 2;
+        gameOver();
+    }
+
+    // Spawn obstacles
+    let spawnRate = Math.max(40, 90 - score * 0.05);
+    if (frameCount % Math.floor(spawnRate) === 0) {
+        spawnObstacle();
+    }
+
+    // Update & draw obstacles
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let ob = obstacles[i];
+        ob.time++;
+        ob.x -= gameSpeed + ob.extraSpeed;
+        ob.y = ob.baseY + Math.sin(ob.time * ob.sineFreq + ob.phase) * ob.sineAmp;
+
+        // Draw obstacle
+        ctx.font = ob.w + 'px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ob.emoji, ob.x, ob.y);
+
+        // Collision
+        if (cloud.invincible <= 0) {
+            let cloudBox = { x: cloud.x, y: cloud.y, w: cloud.w, h: cloud.h };
+            let obBox = { x: ob.x, y: ob.y, w: ob.w * 0.7, h: ob.h * 0.7 };
+            if (checkCollision(cloudBox, obBox)) {
+                gameOver();
+            }
+        }
+
+        // Remove off-screen
+        if (ob.x < -60) {
+            obstacles.splice(i, 1);
+            score++;
+            document.getElementById('scoreDisplay').textContent = score;
+
+            // Check for new level
+            let newLevelIdx = getCurrentLevelIndex(score);
+            if (newLevelIdx > currentLevel) {
+                currentLevel = newLevelIdx;
+                if (!shownLevels[currentLevel]) {
+                    shownLevels[currentLevel] = true;
+                    showNewAnimalPopup(animalLevels[currentLevel]);
+                }
+            }
+
+            let levelData = getAnimalForScore(score);
+            document.getElementById('levelDisplay').textContent = `${levelData.emoji} ${levelData.name}`;
+        }
+    }
+
+    // Draw cloud
+    drawCloud(cloud.x, cloud.y, cloud.w, cloud.h, cloud.invincible);
+
+    // Update & draw particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        let alpha = p.life / p.maxLife;
+        ctx.fillStyle = p.color + alpha + ')';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+// Controls
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (!gameStarted) {
+            startGame();
+        } else {
+            jump();
+        }
+    }
+    if (e.code === 'KeyE' || e.code === 'ShiftRight') {
+        activateBoost();
+    }
+});
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (gameRunning) jump();
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    if (gameRunning) jump();
+});
+</script>
+
+</body>
+</html>
